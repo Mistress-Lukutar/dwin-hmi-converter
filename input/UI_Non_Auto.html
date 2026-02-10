@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServoHMI</title>
+    <style>
+        /* ---------- Общие стили ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .hmi-container {
+            width: 1024px;
+            height: 768px;
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            position: relative;
+        }
+        .page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* ---------- Самоконтроль ---------- */
+        .selftest-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .selftest-title {
+            font-size: 28px;
+            color: #4CAF50;
+            margin-bottom: 30px;
+        }
+        .selftest-status {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .selftest-systems {
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-width: 400px;
+        }
+        .system-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #444;
+        }
+        .system-item:last-child {
+            border-bottom: none;
+        }
+        .system-name {
+            font-size: 16px;
+        }
+        .system-status {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .system-status.ok {
+            color: #4CAF50;
+        }
+        .system-status.error {
+            color: #f44336;
+        }
+        .selftest-message {
+            font-size: 16px;
+            color: #ff9800;
+            margin-bottom: 20px;
+        }
+        .selftest-button {
+            padding: 15px 40px;
+            font-size: 18px;
+        }
+        .hidden {
+            display: none !important;
+        }
+
+        /* ---------- Главная и прочие страницы ---------- */
+        /* (остальные стили без изменений, кроме переименования «температуры») */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #444;
+            margin-bottom: 15px;
+        }
+        .header h1 {
+            font-size: 24px;
+            color: #4CAF50;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn.no-transition, .btn.no-transition * {
+            transition: none !important;
+        }
+        .btn:active {
+            transform: scale(0.98);
+            background: #555 !important;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #e68900;
+        }
+        .btn-secondary {
+            background: #555;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #666;
+        }
+        .btn:disabled {
+            background: #333 !important;
+            color: #666 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .btn-main {
+            padding: 15px 20px;
+            font-size: 16px;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ---------- Главная панель ---------- */
+        .temp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .temp-display {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #444;
+        }
+        .temp-display .label {
+            font-size: 16px;
+            color: #999;
+            margin-bottom: 6px;
+        }
+        .temp-display .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        /* ---------- Полоса/индикаторы ---------- */
+        .position-indicator {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid #444;
+        }
+        .position-indicators {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .indicator {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #333;
+            color: #999;
+            transition: all 0.3s;
+            text-align: center;
+            flex: 1;
+            margin: 0 4px;
+        }
+        .indicator.active {
+            color: white;
+        }
+        #airIndicator.active {
+            background: #2196F3;
+        }
+        #fuelIndicator.active {
+            background: #ff9800;
+        }
+        .position-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 6px;
+        }
+        .position-bar {
+            width: 100%;
+            height: 22px;
+            background: #1a1a1a;
+            border-radius: 11px;
+            position: relative;
+            margin: 8px 0;
+            border: 2px solid #555;
+        }
+        .position-marker {
+            position: absolute;
+            width: 30px;
+            height: 18px;
+            background: #4CAF50;
+            border-radius: 9px;
+            transition: left 0.3s;
+        }
+        .position-status {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+
+        /* ---------- Статус-сетка ---------- */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+        .status-item {
+            background: #2a2a2a;
+            padding: 6px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid #444;
+            font-size: 16px;
+        }
+        .led {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #333;
+        }
+        .led.green {
+            background: #4CAF50;
+        }
+        .led.red {
+            background: #f44336;
+        }
+        .led.yellow {
+            background: #ff9800;
+        }
+
+        /* ---------- Кнопки управления ---------- */
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            height: 80px;
+        }
+
+        /* ---------- Настройки и логи ---------- */
+        .settings-form {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 2px solid #444;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #999;
+            font-size: 16px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 2px solid #555;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .info-box {
+            background: #2a2a2a;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            margin-bottom: 12px;
+        }
+        .info-box .title {
+            font-size: 16px;
+            color: #999;
+            margin-bottom: 6px;
+        }
+        .info-box .content {
+            font-size: 16px;
+            color: #4CAF50;
+        }
+
+        /* ---------- Логи ---------- */
+        .logs-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            height: calc(100% - 80px);
+        }
+        .logs-column {
+            display: flex;
+            flex-direction: column;
+        }
+        .logs-scroll-area {
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 220px;
+            max-height: 520px;
+        }
+        .alarm-log-item {
+            padding: 6px;
+            border-bottom: 1px solid #444;
+            color: #999;
+            font-size: 12px;
+        }
+        .alarm-log-item:last-child {
+            border-bottom: none;
+        }
+        h2 {
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="hmi-container">
+        <!-- ========== ГЛАВНАЯ (РУЧНОЕ УПРАВЛЕНИЕ) ========== -->
+        <div class="page" id="page0">
+            <div class="header">
+                <h1>ServoHMI</h1>
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="changePage(1)">Настройки</button>
+                    <button class="btn btn-secondary" onclick="changePage(2)">Логи</button>
+                </div>
+            </div>
+
+            <div class="temp-grid">
+                <div class="temp-display" style="grid-column: 1 / -1;">
+                    <div class="label">Температура зоны подогрева</div>
+                    <div class="value" id="tempLiquid">23.5 °C</div>
+                </div>
+            </div>
+
+            <div class="position-indicator">
+                <div class="position-indicators">
+                    <div class="indicator" id="airIndicator">AIR</div>
+                    <div class="indicator" id="fuelIndicator">FUEL</div>
+                </div>
+                <div class="position-labels">
+                    <span>ВЕРХ</span>
+                    <span>НИЗ</span>
+                </div>
+                <div class="position-bar" id="positionBar">
+                    <div class="position-marker" id="positionMarker"></div>
+                </div>
+                <div class="position-status" id="positionStatus">Остановлен</div>
+            </div>
+
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="led" id="ledMotor"></div>
+                    <span>Двигатель: <strong id="statusMotor">Стоп</strong></span>
+                </div>
+                <div class="status-item">
+                    <div class="led red" id="ledHeater"></div>
+                    <span>Подогрев: <strong id="statusHeater">Выкл</strong></span>
+                </div>
+                <div class="status-item">
+                    <div class="led" id="ledLimitTop"></div>
+                    <span>Концевик Верх: <strong id="statusLimitTop">OK</strong></span>
+                </div>
+                <div class="status-item">
+                    <div class="led" id="ledLimitBottom"></div>
+                    <span>Концевик Низ: <strong id="statusLimitBottom">OK</strong></span>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="btn btn-primary btn-main" id="btnMove" onclick="toggleMovement()">
+                    <span id="moveText">Опустить</span>
+                </button>
+                <button class="btn btn-warning btn-main" id="btnHeater" onclick="toggleHeater()">
+                    <span id="heaterText">Включить Подогрев</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== НАСТРОЙКИ ========== -->
+        <div class="page" id="page1">
+            <div class="header">
+                <h1>Настройки</h1>
+                <button class="btn btn-secondary" onclick="changePage(0)">На Главную</button>
+            </div>
+
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>Макс. время движения (сек):</label>
+                    <input type="number" id="maxTime" value="30">
+                </div>
+                <div class="form-group">
+                    <label>Темп. отключения нагрева (°C):</label>
+                    <input type="number" id="maxTemp" value="80">
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="title">Версия ПО</div>
+                <div class="content">
+                    Контроллер: v1.0.2<br>
+                    Дисплей: v1.0.1
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary btn-large" style="flex: 1;" onclick="saveSettings()">Сохранить</button>
+                <button class="btn btn-secondary btn-large" style="flex: 1;" onclick="cancelSettings()">Отмена</button>
+            </div>
+        </div>
+
+        <!-- ========== ЛОГИ ========== -->
+        <div class="page" id="page2">
+            <div class="header">
+                <h1>Логи и Диагностика</h1>
+                <button class="btn btn-secondary" onclick="changePage(0)">На Главную</button>
+            </div>
+
+            <div class="logs-container">
+                <div class="logs-column">
+                    <h2 style="color: #4CAF50;">Статистика работы</h2>
+                    
+                    <div class="info-box">
+                        <div class="title">Текущее время</div>
+                        <div class="content" id="currentTime">10.11.2025 14:32:15</div>
+                    </div>
+
+                    <div class="info-box">
+                        <div class="title">Время работы системы</div>
+                        <div class="content" id="uptime">12ч 45мин 30сек</div>
+                    </div>
+
+                    <div class="info-box">
+                        <div class="title">Общее число циклов</div>
+                        <div class="content" id="totalCycles">1,247</div>
+                    </div>
+                </div>
+
+                <div class="logs-column">
+                    <h2 style="color: #f44336;">Аварийные события</h2>
+                    
+                    <div class="logs-scroll-area">
+                        <div id="alarmLog"></div>
+                    </div>
+
+                    <button class="btn btn-secondary" style="margin-top: 10px;" onclick="clearAlarmLog()">
+                        Очистить лог аварий
+                    </button>
+                </div>
+            </div>
+        </div>
+		
+		<!-- ========== СТРАНИЦА САМОКОНТРОЛЯ ========== -->
+        <div class="page active selftest-page" id="page3">
+            <h1 class="selftest-title">Самоконтроль системы</h1>
+            <div class="selftest-status" id="selftestStatus">Выполнение проверки...</div>
+
+            <div class="selftest-systems">
+                <div class="system-item">
+                    <span class="system-name">Двигатель</span>
+                    <span class="system-status" id="motorStatus">Проверка...</span>
+                </div>
+                <div class="system-item">
+                    <span class="system-name">Термометр</span>
+                    <span class="system-status" id="thermometerStatus">Проверка...</span>
+                </div>
+                <div class="system-item">
+                    <span class="system-name">Тестируемый датчик</span>
+                    <span class="system-status" id="sensorStatus">Проверка...</span>
+                </div>
+                <div class="system-item">
+                    <span class="system-name">Концевик верх</span>
+                    <span class="system-status" id="limitTopStatus">Проверка...</span>
+                </div>
+                <div class="system-item">
+                    <span class="system-name">Концевик низ</span>
+                    <span class="system-status" id="limitBottomStatus">Проверка...</span>
+                </div>
+            </div>
+
+            <div class="selftest-message hidden" id="errorMessage">
+                Отключите питание и исправьте ошибки
+            </div>
+
+            <button class="btn btn-primary selftest-button" id="continueButton" onclick="continueToMain()" disabled>
+                Продолжить
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---------- */
+        let heaterOn = false;
+        let currentPosition = 0;
+        let isMoving = false;
+        let targetDirection = 1;
+        let maxLeftPosition = 0;
+        let startTime = Date.now();
+        let totalCycles = 1247;
+        let hasActiveAlarm = false;
+        let isNormalStartup = true; // true = штатный запуск
+
+        /* ---------- УПРАВЛЕНИЕ ЧЕРЕЗ URL ПАРАМЕТРЫ ---------- */
+        // Параметры: ?alarm=1 - симуляция аварии, ?startup=error - запуск с ошибками
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                alarm: params.get('alarm') === '1',
+                startup: params.get('startup') || 'normal' // 'normal' или 'error'
+            };
+        }
+
+        /* ---------- САМОКОНТРОЛЬ ---------- */
+        window.addEventListener('load', () => {
+            const params = getUrlParams();
+            isNormalStartup = params.startup !== 'error';
+            setTimeout(() => {
+                startSelftest();
+                // Если запрошена симуляция аварии после самоконтроля
+                if (params.alarm) {
+                    setTimeout(() => {
+                        continueToMain();
+                        setTimeout(() => simulateAlarm(), 300);
+                    }, 800);
+                }
+            }, 300);
+        });
+
+        function startSelftest() {
+            const systems = [
+                { id: 'motorStatus', name: 'Двигатель', normal: isNormalStartup || Math.random() > 0.3 },
+                { id: 'thermometerStatus', name: 'Термометр', normal: isNormalStartup || Math.random() > 0.2 },
+                { id: 'sensorStatus', name: 'Тестируемый датчик', normal: isNormalStartup || Math.random() > 0.4 },
+                { id: 'limitTopStatus', name: 'Концевик верх', normal: isNormalStartup || Math.random() > 0.2 },
+                { id: 'limitBottomStatus', name: 'Концевик низ', normal: isNormalStartup || Math.random() > 0.2 }
+            ];
+
+            let errorCount = 0;
+            let checkedCount = 0;
+
+            systems.forEach((sys, i) => {
+                setTimeout(() => {
+                    const el = document.getElementById(sys.id);
+                    if (sys.normal) {
+                        el.textContent = 'ОК';
+                        el.classList.add('ok');
+                        el.classList.remove('error');
+                    } else {
+                        el.textContent = 'Ошибка';
+                        el.classList.add('error');
+                        el.classList.remove('ok');
+                        errorCount++;
+                    }
+                    checkedCount++;
+
+                    if (checkedCount === systems.length) {
+                        document.getElementById('selftestStatus').textContent = 'Проверка завершена';
+                        if (errorCount === 0) {
+                            document.getElementById('continueButton').disabled = false;
+                            document.getElementById('errorMessage').classList.add('hidden');
+                        } else {
+                            document.getElementById('errorMessage').classList.remove('hidden');
+                            document.getElementById('selftestStatus').textContent = `Обнаружено ${errorCount} ошибок`;
+                        }
+                    }
+                }, i * 100);
+            });
+        }
+
+        function continueToMain() {
+            // Скрыть самоконтроль и показать главную
+			changePage(0)
+            // Дополнительная инициализация
+            calculateMaxLeft();
+            updatePositionIndicators();
+            updateMovementButtonState();
+            updateData();
+        }
+
+        /* ---------- ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений) ---------- */
+        function changePage(pageNum) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+			document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page' + pageNum).classList.add('active');
+            document.getElementById('page' + pageNum).classList.remove('hidden');
+            if (pageNum === 2) updateStatistics();
+        }
+
+        function updatePositionIndicators() {
+            const air = document.getElementById('airIndicator');
+            const fuel = document.getElementById('fuelIndicator');
+            if (currentPosition < 10) {
+                air.classList.add('active'); fuel.classList.remove('active');
+            } else if (currentPosition > 90) {
+                air.classList.remove('active'); fuel.classList.add('active');
+            } else {
+                air.classList.remove('active'); fuel.classList.remove('active');
+            }
+        }
+
+        function updateMovementButtonState() {
+            const btn = document.getElementById('btnMove');
+            const txt = document.getElementById('moveText');
+            if (hasActiveAlarm) {
+                btn.disabled = true;
+                btn.className = 'btn btn-danger btn-main'; txt.textContent = 'Авария';
+                return;
+            }
+            btn.disabled = false;
+            if (isMoving) {
+                btn.className = 'btn btn-danger btn-main'; txt.textContent = 'Стоп';
+            } else {
+                btn.className = 'btn btn-primary btn-main';
+                if (currentPosition < 10) { txt.textContent = 'Опустить'; targetDirection = 1; }
+                else if (currentPosition > 90) { txt.textContent = 'Поднять'; targetDirection = -1; }
+                else txt.textContent = targetDirection === 1 ? 'Опустить' : 'Поднять';
+            }
+        }
+
+        function toggleMovement() {
+            if (hasActiveAlarm) { alert('Невозможно управлять системой при активной аварии!'); return; }
+            if (isMoving) {
+                isMoving = false; updateMovementButtonState();
+                document.getElementById('statusMotor').textContent = 'Стоп';
+                document.getElementById('ledMotor').classList.remove('green');
+            } else {
+                if ((currentPosition < 10 && targetDirection === -1) || (currentPosition > 90 && targetDirection === 1)) {
+                    alert('Уже в концевой точке!'); return;
+                }
+                isMoving = true; updateMovementButtonState();
+                document.getElementById('statusMotor').textContent = 'В движении';
+                document.getElementById('ledMotor').classList.add('green');
+            }
+        }
+
+        function toggleHeater() {
+            if (!heaterOn && hasActiveAlarm) { alert('Невозможно включить подогрев при активной аварии!'); return; }
+            heaterOn = !heaterOn;
+            const btn = document.getElementById('btnHeater');
+            const txt = document.getElementById('heaterText');
+            const led = document.getElementById('ledHeater');
+            const st = document.getElementById('statusHeater');
+            if (heaterOn) {
+                btn.classList.remove('btn-warning'); btn.classList.add('btn-danger');
+                txt.textContent = 'Выключить Подогрев';
+                led.classList.remove('red'); led.classList.add('green');
+                st.textContent = 'Вкл';
+            } else {
+                btn.classList.remove('btn-danger'); btn.classList.add('btn-warning');
+                txt.textContent = 'Включить Подогрев';
+                led.classList.remove('green'); led.classList.add('red');
+                st.textContent = 'Выкл';
+            }
+        }
+
+        function saveSettings() { alert('Настройки сохранены'); changePage(0); }
+        function cancelSettings() {
+            document.getElementById('maxTime').value = '30';
+            document.getElementById('maxTemp').value = '80';
+            changePage(0);
+        }
+
+        function simulateAlarm() {
+            if (isMoving) toggleMovement();
+            if (heaterOn) toggleHeater();
+            const alarms = [
+                'АВАРИЯ: Сработал верхний концевик!',
+                'АВАРИЯ: Двигатель заблокирован! Таймаут!',
+                'АВАРИЯ: Перегрев двигателя!',
+                'АВАРИЯ: Сработал нижний концевик!'
+            ];
+            const randomAlarm = alarms[Math.floor(Math.random() * alarms.length)];
+            addAlarmToLog(randomAlarm);
+            changePage(2);
+        }
+
+        function addAlarmToLog(message) {
+            const now = new Date();
+            const timeStr = now.toLocaleString('ru-RU');
+            const logDiv = document.getElementById('alarmLog');
+            const newEntry = document.createElement('div');
+            newEntry.className = 'alarm-log-item';
+            newEntry.innerHTML = `
+                <div style="color: #f44336; font-weight: bold;">${timeStr}</div>
+                <div>${message}</div>
+            `;
+            logDiv.insertBefore(newEntry, logDiv.firstChild);
+            hasActiveAlarm = true;
+            updateMovementButtonState();
+        }
+
+        function clearAlarmLog() {
+            if (!confirm('Очистить историю аварий? Это сбросит аварийное состояние системы.')) return;
+            document.getElementById('alarmLog').innerHTML = `
+                <div class="alarm-log-item">
+                    <div style="color: #4CAF50; font-weight: bold;">${new Date().toLocaleString('ru-RU')}</div>
+                    <div>Лог аварий очищен</div>
+                </div>
+            `;
+            hasActiveAlarm = false;
+            updateMovementButtonState();
+        }
+
+        function updateStatistics() {
+            const now = new Date();
+            const uptime = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+            document.getElementById('currentTime').textContent = now.toLocaleString('ru-RU');
+            document.getElementById('uptime').textContent = `${hours}ч ${minutes}мин ${seconds}сек`;
+            document.getElementById('totalCycles').textContent = totalCycles.toLocaleString('ru-RU');
+        }
+
+        function calculateMaxLeft() {
+            const bar = document.getElementById('positionBar');
+            const marker = document.getElementById('positionMarker');
+            if (bar && marker) {
+                const barWidth = bar.offsetWidth;
+                const markerWidth = marker.offsetWidth;
+                maxLeftPosition = barWidth - markerWidth;
+            }
+        }
+
+        function updateData() {
+            document.getElementById('tempLiquid').textContent = (20 + Math.random() * 10).toFixed(1) + ' °C';
+            if (isMoving) {
+                const moveSpeed = 5;
+                currentPosition += targetDirection * moveSpeed;
+                if (currentPosition <= 0) {
+                    currentPosition = 0; isMoving = false;
+                    updateMovementButtonState();
+                    document.getElementById('statusMotor').textContent = 'Стоп';
+                    document.getElementById('ledMotor').classList.remove('green');
+                } else if (currentPosition >= 100) {
+                    currentPosition = 100; isMoving = false;
+                    updateMovementButtonState();
+                    document.getElementById('statusMotor').textContent = 'Стоп';
+                    document.getElementById('ledMotor').classList.remove('green');
+                }
+                updatePositionIndicators();
+            }
+            const marker = document.getElementById('positionMarker');
+            if (maxLeftPosition > 0) marker.style.left = (currentPosition / 100 * maxLeftPosition) + 'px';
+            const statusEl = document.getElementById('positionStatus');
+            let txt, clr;
+            if (isMoving) { txt = targetDirection === 1 ? 'Спуск...' : 'Подъем...'; clr = '#4CAF50'; }
+            else if (currentPosition < 10) { txt = 'AIR'; clr = '#2196F3'; }
+            else if (currentPosition > 90) { txt = 'FUEL'; clr = '#ff9800'; }
+            else { txt = 'Остановлен'; clr = '#f44336'; }
+            statusEl.textContent = txt; statusEl.style.color = clr;
+        }
+
+        /* ---------- ИНИЦИАЛИЗАЦИЯ ---------- */
+        window.addEventListener('resize', calculateMaxLeft);
+        setInterval(updateData, 100);
+        setInterval(() => { if (document.getElementById('page2').classList.contains('active')) updateStatistics(); }, 1000);
+    </script>
+</body>
+</html>

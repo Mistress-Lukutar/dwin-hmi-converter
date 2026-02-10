@@ -1,0 +1,165 @@
+{
+  "name": "ServoHMI Non-Auto",
+  "html_file": "UI_Non_Auto.html",
+  "resolution": [1024, 768],
+  "bmp_depth": 24,
+  "container_selector": ".hmi-container",
+  
+  "pages": {
+    "0": {
+      "name": "main",
+      "title": "Main Control"
+    },
+    "1": {
+      "name": "settings", 
+      "title": "Settings"
+    },
+    "2": {
+      "name": "logs",
+      "title": "Logs & Diagnostics"
+    },
+    "3": {
+      "name": "selftest",
+      "title": "System Self-Test"
+    }
+  },
+  
+  "elements": {
+    "btn_move": "#btnMove",
+    "btn_heater": "#btnHeater",
+    "btn_settings": "button[onclick='changePage(1)']",
+    "btn_logs": "button[onclick='changePage(2)']",
+    "btn_home_settings": "#page1 button[onclick='changePage(0)']",
+    "btn_save": "button[onclick='saveSettings()']",
+    "btn_cancel": "button[onclick='cancelSettings()']",
+    "btn_home_logs": "#page2 button[onclick='changePage(0)']",
+    "btn_clear_logs": "button[onclick='clearAlarmLog()']",
+    "btn_continue": "#continueButton",
+    "indicator_air": "#airIndicator",
+    "indicator_fuel": "#fuelIndicator",
+    "position_bar": "#positionBar",
+    "position_marker": "#positionMarker",
+    "status_motor": "#statusMotor",
+    "status_heater": "#statusHeater",
+    "led_limit_top": "#ledLimitTop",
+    "led_limit_bottom": "#ledLimitBottom",
+    "temp_display": ".temp-display",
+    "settings_form": ".settings-form",
+    "logs_container": ".logs-container"
+  },
+  
+  "element_states": {
+    "led_motor": {
+      "selector": "#ledMotor",
+      "page": 0,
+      "states": [
+        {
+          "name": "off",
+          "js": "el.classList.remove('green', 'red'); el.classList.add('gray');"
+        },
+        {
+          "name": "green",
+          "js": "el.classList.remove('gray', 'red'); el.classList.add('green');"
+        }
+      ]
+    },
+    "led_heater": {
+      "selector": "#ledHeater",
+      "page": 0,
+      "states": [
+        {
+          "name": "off",
+          "js": "el.classList.remove('green'); el.classList.add('red');"
+        },
+        {
+          "name": "on",
+          "js": "el.classList.remove('red'); el.classList.add('green');"
+        }
+      ]
+    },
+    "btn_move": {
+      "selector": "#btnMove",
+      "page": 0,
+      "states": [
+        {
+          "name": "up",
+          "js": "el.classList.remove('active'); el.style.transform = 'scale(1)';"
+        },
+        {
+          "name": "down",
+          "js": "el.classList.add('active'); el.style.transform = 'scale(0.98)';"
+        }
+      ]
+    },
+    "btn_heater": {
+      "selector": "#btnHeater",
+      "page": 0,
+      "states": [
+        {
+          "name": "off",
+          "js": "el.classList.remove('btn-danger'); el.classList.add('btn-warning');"
+        },
+        {
+          "name": "on",
+          "js": "el.classList.remove('btn-warning'); el.classList.add('btn-danger');"
+        }
+      ]
+    },
+    "indicator_air": {
+      "selector": "#airIndicator",
+      "page": 0,
+      "states": [
+        {
+          "name": "inactive",
+          "js": "el.classList.remove('active');"
+        },
+        {
+          "name": "active",
+          "js": "el.classList.add('active');"
+        }
+      ]
+    },
+    "indicator_fuel": {
+      "selector": "#fuelIndicator",
+      "page": 0,
+      "states": [
+        {
+          "name": "inactive",
+          "js": "el.classList.remove('active');"
+        },
+        {
+          "name": "active",
+          "js": "el.classList.add('active');"
+        }
+      ]
+    }
+  },
+  
+  "touch_areas": {
+    "main": {
+      "btn_move": {"x": 15, "y": 653, "width": 484, "height": 80},
+      "btn_heater": {"x": 525, "y": 653, "width": 484, "height": 80},
+      "btn_settings": {"x": 726, "y": 15, "width": 131, "height": 36},
+      "btn_logs": {"x": 863, "y": 15, "width": 81, "height": 36}
+    },
+    "settings": {
+      "btn_home": {"x": 869, "y": 15, "width": 140, "height": 36},
+      "btn_save": {"x": 15, "y": 600, "width": 484, "height": 36},
+      "btn_cancel": {"x": 525, "y": 600, "width": 484, "height": 36}
+    },
+    "logs": {
+      "btn_home": {"x": 869, "y": 15, "width": 140, "height": 36},
+      "btn_clear_logs": {"x": 525, "y": 705, "width": 483, "height": 36}
+    },
+    "selftest": {
+      "btn_continue": {"x": 438, "y": 600, "width": 147, "height": 36}
+    }
+  },
+  
+  "page_mapping": {
+    "00_main.bmp": "00.bmp",
+    "01_settings.bmp": "01.bmp",
+    "02_logs.bmp": "02.bmp",
+    "03_selftest.bmp": "03.bmp"
+  }
+}

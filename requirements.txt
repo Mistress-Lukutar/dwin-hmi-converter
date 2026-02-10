@@ -1,0 +1,8 @@
+# HTML to DWIN BMP Converter
+# Python dependencies for converting HTML interface to 24-bit BMP images for DWIN DGUS displays
+
+# Web browser automation for HTML rendering
+selenium>=4.0.0
+
+# Image processing and BMP conversion
+Pillow>=9.0.0
